@@ -1,0 +1,221 @@
+from http import HTTPStatus
+from typing import Any, cast
+from urllib.parse import quote
+
+import httpx
+
+from ...client import AuthenticatedClient, Client
+from ...types import Response, UNSET
+from ... import errors
+
+from ...models.gateway_error_response import GatewayErrorResponse
+from ...models.gateway_users_response import GatewayUsersResponse
+from ...types import UNSET, Unset
+from typing import cast
+
+
+def _get_kwargs(
+    *,
+    limit: int | Unset = UNSET,
+    offset: int | Unset = UNSET,
+    status: str | Unset = UNSET,
+    name_ilk: str | Unset = UNSET,
+) -> dict[str, Any]:
+
+    params: dict[str, Any] = {}
+
+    params["limit"] = limit
+
+    params["offset"] = offset
+
+    params["status"] = status
+
+    params["name__ilk"] = name_ilk
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
+    _kwargs: dict[str, Any] = {
+        "method": "get",
+        "url": "/tenants/users",
+        "params": params,
+    }
+
+    return _kwargs
+
+
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> GatewayErrorResponse | GatewayUsersResponse | None:
+    if response.status_code == 200:
+        response_200 = GatewayUsersResponse.from_dict(response.json())
+
+        return response_200
+
+    if response.status_code == 401:
+        response_401 = GatewayErrorResponse.from_dict(response.json())
+
+        return response_401
+
+    if response.status_code == 403:
+        response_403 = GatewayErrorResponse.from_dict(response.json())
+
+        return response_403
+
+    if response.status_code == 500:
+        response_500 = GatewayErrorResponse.from_dict(response.json())
+
+        return response_500
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[GatewayErrorResponse | GatewayUsersResponse]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    *,
+    client: AuthenticatedClient,
+    limit: int | Unset = UNSET,
+    offset: int | Unset = UNSET,
+    status: str | Unset = UNSET,
+    name_ilk: str | Unset = UNSET,
+) -> Response[GatewayErrorResponse | GatewayUsersResponse]:
+    """
+    Args:
+        limit (int | Unset):
+        offset (int | Unset):
+        status (str | Unset):
+        name_ilk (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[GatewayErrorResponse | GatewayUsersResponse]
+    """
+
+    kwargs = _get_kwargs(
+        limit=limit,
+        offset=offset,
+        status=status,
+        name_ilk=name_ilk,
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+
+def sync(
+    *,
+    client: AuthenticatedClient,
+    limit: int | Unset = UNSET,
+    offset: int | Unset = UNSET,
+    status: str | Unset = UNSET,
+    name_ilk: str | Unset = UNSET,
+) -> GatewayErrorResponse | GatewayUsersResponse | None:
+    """
+    Args:
+        limit (int | Unset):
+        offset (int | Unset):
+        status (str | Unset):
+        name_ilk (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        GatewayErrorResponse | GatewayUsersResponse
+    """
+
+    return sync_detailed(
+        client=client,
+        limit=limit,
+        offset=offset,
+        status=status,
+        name_ilk=name_ilk,
+    ).parsed
+
+
+async def asyncio_detailed(
+    *,
+    client: AuthenticatedClient,
+    limit: int | Unset = UNSET,
+    offset: int | Unset = UNSET,
+    status: str | Unset = UNSET,
+    name_ilk: str | Unset = UNSET,
+) -> Response[GatewayErrorResponse | GatewayUsersResponse]:
+    """
+    Args:
+        limit (int | Unset):
+        offset (int | Unset):
+        status (str | Unset):
+        name_ilk (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[GatewayErrorResponse | GatewayUsersResponse]
+    """
+
+    kwargs = _get_kwargs(
+        limit=limit,
+        offset=offset,
+        status=status,
+        name_ilk=name_ilk,
+    )
+
+    response = await client.get_async_httpx_client().request(**kwargs)
+
+    return _build_response(client=client, response=response)
+
+
+async def asyncio(
+    *,
+    client: AuthenticatedClient,
+    limit: int | Unset = UNSET,
+    offset: int | Unset = UNSET,
+    status: str | Unset = UNSET,
+    name_ilk: str | Unset = UNSET,
+) -> GatewayErrorResponse | GatewayUsersResponse | None:
+    """
+    Args:
+        limit (int | Unset):
+        offset (int | Unset):
+        status (str | Unset):
+        name_ilk (str | Unset):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        GatewayErrorResponse | GatewayUsersResponse
+    """
+
+    return (
+        await asyncio_detailed(
+            client=client,
+            limit=limit,
+            offset=offset,
+            status=status,
+            name_ilk=name_ilk,
+        )
+    ).parsed

@@ -1,0 +1,21 @@
+# Keys allowed to sign release tags in this repository, in OpenSSH
+# `allowed_signers` format. Read by .github/workflows/publish.yml, which
+# refuses to publish a tag it cannot attribute to a key listed here.
+#
+# This is the public half of the release automation's key; publishing it is
+# safe and is the point — anyone can re-run the same verification locally:
+#
+#   git -c gpg.format=ssh \
+#       -c gpg.ssh.allowedSignersFile=.github/release-signers \
+#       verify-tag v0.1.0
+#
+# Rotating it requires changing the private half held by the release
+# automation and this file in the same release cycle; the automation refuses to
+# cut a tag with a key that is not listed here.
+#
+# The release automation's signer identity was renamed from "flintai-sync" to
+# "switch-trust-sync" to match the repo rename. Verification matches on the key,
+# not the identity string, so this one line still verifies every existing tag
+# (including those signed before the rename) -- confirmed with `git verify-tag`
+# against v0.1.0 and v0.1.0rc1-rc3.
+switch-trust-sync@users.noreply.github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBmZWb6qVRqFZ9USquF9CJuTG9nWraKa6/fLb00TvAYY

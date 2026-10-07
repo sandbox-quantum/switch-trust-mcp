@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "switch-trust-mcp"
+version = "0.1.0"
+description = "Switch Trust platform MCP server: read-only AI-SPM issues, inventory, and remediation guidance for coding agents"
+readme = "README.md"
+# 3.11+: the generated OpenAPI clients import ``typing.Self`` (new in 3.11) at
+# module top with no ``typing_extensions`` fallback, so 3.10 would ImportError
+# on first import.
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "SandboxAQ" },
+]
+keywords = ["ai", "mcp", "security", "ai-spm", "switch-trust"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+dependencies = [
+  "httpx>=0.28,<1",
+  "mcp>=1.27,<2",
+  # Runtime for the generated OpenAPI clients (switch_trust_mcp._platform_api /
+  # _auth_api): attrs models and date parsing.
+  "attrs>=25,<27",
+  "python-dateutil>=2.9,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.0.3,<10"]
+# Release-audit tooling: `make release-audit` in the public repo. gitleaks is a
+# Go binary and is installed separately.
+audit = [
+  "pip-licenses>=5.0",
+  "cyclonedx-bom>=6.0",
+  "pip-audit>=2.7",
+  "pip-tools==7.6.2",
+]
+
+[project.scripts]
+switch-trust-mcp = "switch_trust_mcp.server:main"
+
+[project.urls]
+Repository = "https://github.com/sandbox-quantum/switch-trust-mcp"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+switch_trust_mcp = ["py.typed", "remediation_procedure.md"]
+"switch_trust_mcp._platform_api" = ["py.typed"]
+"switch_trust_mcp._auth_api" = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_configs = true

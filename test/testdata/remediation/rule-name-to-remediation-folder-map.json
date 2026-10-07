@@ -1,0 +1,5 @@
+{
+  "Missing input guardrails": "missing-input-guardrails",
+  "Rule without docs": "",
+  "Rule with empty fragments": "empty-fragments"
+}

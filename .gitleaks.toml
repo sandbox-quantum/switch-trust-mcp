@@ -1,0 +1,6 @@
+[allowlist]
+description = "Allow dummy/test API keys used in the hermetic test suite"
+regexes = [
+    '''sk_test''',
+    '''sk_switch_trust''',
+]

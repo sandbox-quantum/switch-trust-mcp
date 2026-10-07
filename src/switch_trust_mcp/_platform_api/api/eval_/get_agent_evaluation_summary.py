@@ -1,0 +1,209 @@
+from http import HTTPStatus
+from typing import Any, cast
+from urllib.parse import quote
+
+import httpx
+
+from ...client import AuthenticatedClient, Client
+from ...types import Response, UNSET
+from ... import errors
+
+from ...models.common_request_error import CommonRequestError
+from ...models.eval_agent_evaluation_summary import EvalAgentEvaluationSummary
+from typing import cast
+
+
+def _get_kwargs(
+    tenant_id: str,
+    workspace_id: str,
+    *,
+    agent_id: str,
+) -> dict[str, Any]:
+
+    params: dict[str, Any] = {}
+
+    params["agent_id"] = agent_id
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
+    _kwargs: dict[str, Any] = {
+        "method": "get",
+        "url": "/eval/agent-evaluation-summary/tenants/{tenant_id}/workspaces/{workspace_id}".format(
+            tenant_id=quote(str(tenant_id), safe=""),
+            workspace_id=quote(str(workspace_id), safe=""),
+        ),
+        "params": params,
+    }
+
+    return _kwargs
+
+
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> CommonRequestError | EvalAgentEvaluationSummary | None:
+    if response.status_code == 200:
+        response_200 = EvalAgentEvaluationSummary.from_dict(response.json())
+
+        return response_200
+
+    if response.status_code == 400:
+        response_400 = CommonRequestError.from_dict(response.json())
+
+        return response_400
+
+    if response.status_code == 401:
+        response_401 = CommonRequestError.from_dict(response.json())
+
+        return response_401
+
+    if response.status_code == 403:
+        response_403 = CommonRequestError.from_dict(response.json())
+
+        return response_403
+
+    if response.status_code == 500:
+        response_500 = CommonRequestError.from_dict(response.json())
+
+        return response_500
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[CommonRequestError | EvalAgentEvaluationSummary]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    tenant_id: str,
+    workspace_id: str,
+    *,
+    client: AuthenticatedClient,
+    agent_id: str,
+) -> Response[CommonRequestError | EvalAgentEvaluationSummary]:
+    """
+    Args:
+        tenant_id (str):
+        workspace_id (str):
+        agent_id (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[CommonRequestError | EvalAgentEvaluationSummary]
+    """
+
+    kwargs = _get_kwargs(
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+        agent_id=agent_id,
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+
+def sync(
+    tenant_id: str,
+    workspace_id: str,
+    *,
+    client: AuthenticatedClient,
+    agent_id: str,
+) -> CommonRequestError | EvalAgentEvaluationSummary | None:
+    """
+    Args:
+        tenant_id (str):
+        workspace_id (str):
+        agent_id (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        CommonRequestError | EvalAgentEvaluationSummary
+    """
+
+    return sync_detailed(
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+        client=client,
+        agent_id=agent_id,
+    ).parsed
+
+
+async def asyncio_detailed(
+    tenant_id: str,
+    workspace_id: str,
+    *,
+    client: AuthenticatedClient,
+    agent_id: str,
+) -> Response[CommonRequestError | EvalAgentEvaluationSummary]:
+    """
+    Args:
+        tenant_id (str):
+        workspace_id (str):
+        agent_id (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[CommonRequestError | EvalAgentEvaluationSummary]
+    """
+
+    kwargs = _get_kwargs(
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+        agent_id=agent_id,
+    )
+
+    response = await client.get_async_httpx_client().request(**kwargs)
+
+    return _build_response(client=client, response=response)
+
+
+async def asyncio(
+    tenant_id: str,
+    workspace_id: str,
+    *,
+    client: AuthenticatedClient,
+    agent_id: str,
+) -> CommonRequestError | EvalAgentEvaluationSummary | None:
+    """
+    Args:
+        tenant_id (str):
+        workspace_id (str):
+        agent_id (str):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        CommonRequestError | EvalAgentEvaluationSummary
+    """
+
+    return (
+        await asyncio_detailed(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            client=client,
+            agent_id=agent_id,
+        )
+    ).parsed
