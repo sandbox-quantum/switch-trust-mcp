@@ -1,3 +1,12 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "corporate-email"
+description = "SandboxAQ corporate email address"
+regex = '''(?i)[a-z0-9._%+-]+@(?:[a-z0-9-]+\.)*(?:sandboxaq|sandboxquantum)\.com\b'''
+keywords = ["sandboxaq", "sandboxquantum"]
+
 [allowlist]
 description = "Allow dummy/test API keys used in the hermetic test suite"
 regexes = [

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "switch-trust-mcp"
-version = "0.1.0"
-description = "Switch Trust platform MCP server: read-only AI-SPM issues, inventory, and remediation guidance for coding agents"
+version = "0.2.0"
+description = "Switch Trust platform MCP server: read-only AI-SPM issues, inventory, remediation guidance, guardrails and cost optimization for coding agents"
 readme = "README.md"
 # 3.11+: the generated OpenAPI clients import ``typing.Self`` (new in 3.11) at
 # module top with no ``typing_extensions`` fallback, so 3.10 would ImportError

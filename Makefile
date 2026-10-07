@@ -148,17 +148,23 @@ vuln-scan:
 secret-scan:
 	@mkdir -p release
 	@echo "=== Secret scan (gitleaks) ==="
-	gitleaks detect --source . --no-git \
+	gitleaks detect --source . --no-git --redact \
 		--report-path=release/gitleaks-report.json \
 		--report-format=json \
 		--exit-code 1 \
 		|| (echo "FAIL: secrets detected — see release/gitleaks-report.json" && exit 1)
 	@echo "=== Secret scan (gitleaks) - git history ==="
-	gitleaks detect --source . \
+	gitleaks detect --source . --redact \
 		--report-path=release/gitleaks-history-report.json \
 		--report-format=json \
 		--exit-code 1 \
 		|| (echo "FAIL: secrets detected in git history - see release/gitleaks-history-report.json" && exit 1)
+	@echo "=== Commit metadata scan (corporate emails in authors, committers, messages) ==="
+	@if git log --format='%ae%n%ce%n%B' | grep -Eiq '@([a-z0-9-]+\.)*(sandboxaq|sandboxquantum)\.com([^a-z0-9-]|$$)'; then \
+		echo "FAIL: corporate email in commit metadata:"; \
+		git log --format='%h %ae %ce' | grep -Ei '(sandboxaq|sandboxquantum)\.com' | head -20; \
+		exit 1; \
+	fi
 	@echo "No secrets detected."
 
 lock-deps:

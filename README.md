@@ -1,8 +1,9 @@
 # switch-trust-mcp
 
 A local [MCP](https://modelcontextprotocol.io) server (stdio) that gives a coding
-agent read-only access to a Switch Trust backend's **AI-SPM issues, inventory, and
-remediation guidance** so it can fix the flagged code.
+agent read-only access to a Switch Trust backend's **AI-SPM issues, inventory,
+guardrails, cost optimization and remediation guidance** so it can fix the flagged
+code.
 
 It is a thin, authenticated REST client over the Switch Trust API — no scanner runs
 locally and no backend changes are required. Everything valuable (AI-reasoned
