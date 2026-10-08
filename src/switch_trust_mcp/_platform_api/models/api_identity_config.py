@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..types import UNSET, Unset
+from typing import cast
 
 
 T = TypeVar("T", bound="ApiIdentityConfig")
@@ -21,14 +22,14 @@ class ApiIdentityConfig:
         key_scope (str | Unset):
         org_id (str | Unset):
         tenant_id (str | Unset):
-        user_id (str | Unset):
+        user_id (None | str | Unset):
         workspace_id (str | Unset):
     """
 
     key_scope: str | Unset = UNSET
     org_id: str | Unset = UNSET
     tenant_id: str | Unset = UNSET
-    user_id: str | Unset = UNSET
+    user_id: None | str | Unset = UNSET
     workspace_id: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -39,7 +40,11 @@ class ApiIdentityConfig:
 
         tenant_id = self.tenant_id
 
-        user_id = self.user_id
+        user_id: None | str | Unset
+        if isinstance(self.user_id, Unset):
+            user_id = UNSET
+        else:
+            user_id = self.user_id
 
         workspace_id = self.workspace_id
 
@@ -68,7 +73,14 @@ class ApiIdentityConfig:
 
         tenant_id = d.pop("tenant_id", UNSET)
 
-        user_id = d.pop("user_id", UNSET)
+        def _parse_user_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        user_id = _parse_user_id(d.pop("user_id", UNSET))
 
         workspace_id = d.pop("workspace_id", UNSET)
 

@@ -7,7 +7,7 @@ the latest released version on PyPI.
 
 | Version | Supported |
 | ------- | --------- |
-| 0.1.x   | ✅        |
+| 0.2.x   | ✅        |
 
 ## Reporting a Vulnerability
 
@@ -106,7 +106,7 @@ reproducible by anyone:
 ```bash
 git -c gpg.format=ssh \
     -c gpg.ssh.allowedSignersFile=.github/release-signers \
-    verify-tag v0.2.0
+    verify-tag v0.2.2
 ```
 
 `.github/workflows/publish.yml` runs that same check before building, and also
@@ -131,7 +131,7 @@ carry a signed build-provenance attestation, so a downloaded wheel can be tied
 back to the commit and workflow run that produced it:
 
 ```bash
-gh attestation verify switch_trust_mcp-0.2.0-py3-none-any.whl \
+gh attestation verify switch_trust_mcp-0.2.2-py3-none-any.whl \
   --repo sandbox-quantum/switch-trust-mcp
 ```
 

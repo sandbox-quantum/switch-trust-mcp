@@ -25,7 +25,7 @@ Set two environment variables:
 | Variable                 | Meaning                                                        |
 | ------------------------ | --------------------------------------------------------------- |
 | `SWITCH_TRUST_API_KEY`   | Switch Trust API key (`sk_...`).                                |
-| `SWITCH_TRUST_INSTANCE`  | Switch Trust instance base URL, e.g. `https://app.flintai.dev`. |
+| `SWITCH_TRUST_INSTANCE`  | Switch Trust instance base URL, e.g. `https://app.switchagents.ai`. |
 
 The instance URL is validated against a fail-closed host allowlist before any
 credential is attached.
@@ -49,7 +49,7 @@ Add to your MCP client config (Claude Code `.mcp.json`, Cursor, etc.):
       "args": ["switch-trust-mcp"],
       "env": {
         "SWITCH_TRUST_API_KEY": "sk_...",
-        "SWITCH_TRUST_INSTANCE": "https://app.flintai.dev"
+        "SWITCH_TRUST_INSTANCE": "https://app.switchagents.ai"
       }
     }
   }

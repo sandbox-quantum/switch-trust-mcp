@@ -16,10 +16,7 @@ from urllib.parse import urlparse
 
 # The Switch Trust instance hosts a credential may be sent to. Each entry is
 # matched exactly or as a parent suffix (a ``.<entry>`` subdomain).
-ALLOWED_SWITCH_TRUST_HOSTS = (
-    # TODO(rebrand): update once the backend's own domain moves off flintai.dev.
-    "flintai.dev",
-)
+ALLOWED_SWITCH_TRUST_HOSTS = ("switchagents.ai",)
 
 # Env var names for the API key and the instance base URL. Tuples leave room for
 # future aliases, but there is a single supported name for each today.
@@ -82,7 +79,7 @@ def validate_switch_trust_instance(instance: str | None) -> str | None:
     if parsed.scheme != "https":
         return None
     # Exact host or a subdomain of an allowed domain. The leading dot in the
-    # suffix check prevents look-alikes such as "evilflintai.dev".
+    # suffix check prevents look-alikes such as "evilswitchagents.ai".
     if not any(
         host == allowed or host.endswith(f".{allowed}")
         for allowed in ALLOWED_SWITCH_TRUST_HOSTS

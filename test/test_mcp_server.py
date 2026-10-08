@@ -23,7 +23,7 @@ from switch_trust_mcp.config import (
 )
 from switch_trust_mcp.remediation import RemediationDocs
 
-VALID_INSTANCE = "https://flintai.dev"
+VALID_INSTANCE = "https://switchagents.ai"
 
 
 def _remediation_dir():
@@ -38,18 +38,18 @@ def _remediation_dir():
 class TestValidateSwitchTrustInstance:
     def test_accepts_allowlisted_https_host(self):
         assert (
-            validate_switch_trust_instance("https://flintai.dev")
-            == "https://flintai.dev"
+            validate_switch_trust_instance("https://switchagents.ai")
+            == "https://switchagents.ai"
         )
 
     def test_strips_trailing_slash(self):
         assert (
-            validate_switch_trust_instance("https://flintai.dev/")
-            == "https://flintai.dev"
+            validate_switch_trust_instance("https://switchagents.ai/")
+            == "https://switchagents.ai"
         )
 
     def test_rejects_http_scheme(self):
-        assert validate_switch_trust_instance("http://flintai.dev") is None
+        assert validate_switch_trust_instance("http://switchagents.ai") is None
 
     def test_rejects_non_allowlisted_host(self):
         assert validate_switch_trust_instance("https://evil.com") is None
@@ -77,9 +77,10 @@ class TestValidateSwitchTrustInstance:
         assert validate_switch_trust_instance("file://localhost/etc/passwd") is None
 
     def test_rejects_lookalike_host(self):
-        assert validate_switch_trust_instance("https://evilflintai.dev") is None
+        assert validate_switch_trust_instance("https://evilswitchagents.ai") is None
         assert (
-            validate_switch_trust_instance("https://flintai.dev.attacker.com") is None
+            validate_switch_trust_instance("https://switchagents.ai.attacker.com")
+            is None
         )
 
     def test_rejects_empty_and_none(self):
@@ -104,7 +105,7 @@ class TestLoadConfig:
 
     def test_invalid_instance_raises(self, monkeypatch):
         monkeypatch.setenv("SWITCH_TRUST_API_KEY", "sk_switch_trust")
-        monkeypatch.setenv("SWITCH_TRUST_INSTANCE", "http://flintai.dev")
+        monkeypatch.setenv("SWITCH_TRUST_INSTANCE", "http://switchagents.ai")
         with pytest.raises(ConfigError):
             load_config()
 
@@ -544,7 +545,7 @@ class TestTypedClientCalls:
 
     def test_scrubbed_authenticated_client_repr_omits_token(self):
         scrubbed = client_mod._ScrubbedAuthenticatedClient(
-            base_url="https://flintai.dev/api/v1",
+            base_url="https://switchagents.ai/api/v1",
             token="sk_should_not_appear",
             prefix="ApiKey",
         )
