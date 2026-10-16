@@ -6,7 +6,6 @@ class GetAispmMcpServerEdgesEdge(StrEnum):
     AISPM_MCP_RESOURCES = "aispm_mcp_resources"
     AISPM_TOOLS = "aispm_tools"
     ASSETS = "assets"
-    INSTANCES = "instances"
     ISSUES = "issues"
     LOCATIONS = "locations"
     SESSIONS = "sessions"

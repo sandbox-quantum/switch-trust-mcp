@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.cost_model_pricing_source import CostModelPricingSource
 from ..types import UNSET, Unset
 
 
@@ -30,7 +31,7 @@ class CostModelPricing:
         model_supplier (str | Unset):
         output_cost_per_1m_tok (float | Unset):
         price_as_of (str | Unset):
-        source (str | Unset):
+        source (CostModelPricingSource | Unset):
     """
 
     cache_read_cost_per_1m_tok: float | Unset = UNSET
@@ -45,7 +46,7 @@ class CostModelPricing:
     model_supplier: str | Unset = UNSET
     output_cost_per_1m_tok: float | Unset = UNSET
     price_as_of: str | Unset = UNSET
-    source: str | Unset = UNSET
+    source: CostModelPricingSource | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -73,7 +74,9 @@ class CostModelPricing:
 
         price_as_of = self.price_as_of
 
-        source = self.source
+        source: str | Unset = UNSET
+        if not isinstance(self.source, Unset):
+            source = self.source.value
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -144,7 +147,12 @@ class CostModelPricing:
 
         price_as_of = d.pop("price_as_of", UNSET)
 
-        source = d.pop("source", UNSET)
+        _source = d.pop("source", UNSET)
+        source: CostModelPricingSource | Unset
+        if isinstance(_source, Unset):
+            source = UNSET
+        else:
+            source = CostModelPricingSource(_source)
 
         cost_model_pricing = cls(
             cache_read_cost_per_1m_tok=cache_read_cost_per_1m_tok,

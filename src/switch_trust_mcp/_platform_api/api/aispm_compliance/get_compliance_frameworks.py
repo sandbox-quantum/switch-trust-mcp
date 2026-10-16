@@ -9,26 +9,17 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.common_request_error import CommonRequestError
-from ...models.engine_output_engine_data_page import EngineOutputEngineDataPage
-from ...models.get_location_edges_edge import GetLocationEdgesEdge
+from ...models.get_compliance_frameworks_response_200 import (
+    GetComplianceFrameworksResponse200,
+)
 from typing import cast
 
 
-def _get_kwargs(
-    tenant_id: str,
-    workspace_id: str,
-    id: str,
-    edge: GetLocationEdgesEdge,
-) -> dict[str, Any]:
+def _get_kwargs() -> dict[str, Any]:
 
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/locations/tenants/{tenant_id}/workspaces/{workspace_id}/{id}/{edge}".format(
-            tenant_id=quote(str(tenant_id), safe=""),
-            workspace_id=quote(str(workspace_id), safe=""),
-            id=quote(str(id), safe=""),
-            edge=quote(str(edge), safe=""),
-        ),
+        "url": "/aispm/compliance/frameworks",
     }
 
     return _kwargs
@@ -36,26 +27,16 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> CommonRequestError | EngineOutputEngineDataPage | None:
+) -> CommonRequestError | GetComplianceFrameworksResponse200 | None:
     if response.status_code == 200:
-        response_200 = EngineOutputEngineDataPage.from_dict(response.json())
+        response_200 = GetComplianceFrameworksResponse200.from_dict(response.json())
 
         return response_200
-
-    if response.status_code == 400:
-        response_400 = CommonRequestError.from_dict(response.json())
-
-        return response_400
 
     if response.status_code == 401:
         response_401 = CommonRequestError.from_dict(response.json())
 
         return response_401
-
-    if response.status_code == 404:
-        response_404 = CommonRequestError.from_dict(response.json())
-
-        return response_404
 
     if response.status_code == 500:
         response_500 = CommonRequestError.from_dict(response.json())
@@ -70,7 +51,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[CommonRequestError | EngineOutputEngineDataPage]:
+) -> Response[CommonRequestError | GetComplianceFrameworksResponse200]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -80,34 +61,19 @@ def _build_response(
 
 
 def sync_detailed(
-    tenant_id: str,
-    workspace_id: str,
-    id: str,
-    edge: GetLocationEdgesEdge,
     *,
     client: AuthenticatedClient,
-) -> Response[CommonRequestError | EngineOutputEngineDataPage]:
+) -> Response[CommonRequestError | GetComplianceFrameworksResponse200]:
     """
-    Args:
-        tenant_id (str):
-        workspace_id (str):
-        id (str):
-        edge (GetLocationEdgesEdge):
-
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[CommonRequestError | EngineOutputEngineDataPage]
+        Response[CommonRequestError | GetComplianceFrameworksResponse200]
     """
 
-    kwargs = _get_kwargs(
-        tenant_id=tenant_id,
-        workspace_id=workspace_id,
-        id=id,
-        edge=edge,
-    )
+    kwargs = _get_kwargs()
 
     response = client.get_httpx_client().request(
         **kwargs,
@@ -117,66 +83,37 @@ def sync_detailed(
 
 
 def sync(
-    tenant_id: str,
-    workspace_id: str,
-    id: str,
-    edge: GetLocationEdgesEdge,
     *,
     client: AuthenticatedClient,
-) -> CommonRequestError | EngineOutputEngineDataPage | None:
+) -> CommonRequestError | GetComplianceFrameworksResponse200 | None:
     """
-    Args:
-        tenant_id (str):
-        workspace_id (str):
-        id (str):
-        edge (GetLocationEdgesEdge):
-
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        CommonRequestError | EngineOutputEngineDataPage
+        CommonRequestError | GetComplianceFrameworksResponse200
     """
 
     return sync_detailed(
-        tenant_id=tenant_id,
-        workspace_id=workspace_id,
-        id=id,
-        edge=edge,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    tenant_id: str,
-    workspace_id: str,
-    id: str,
-    edge: GetLocationEdgesEdge,
     *,
     client: AuthenticatedClient,
-) -> Response[CommonRequestError | EngineOutputEngineDataPage]:
+) -> Response[CommonRequestError | GetComplianceFrameworksResponse200]:
     """
-    Args:
-        tenant_id (str):
-        workspace_id (str):
-        id (str):
-        edge (GetLocationEdgesEdge):
-
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[CommonRequestError | EngineOutputEngineDataPage]
+        Response[CommonRequestError | GetComplianceFrameworksResponse200]
     """
 
-    kwargs = _get_kwargs(
-        tenant_id=tenant_id,
-        workspace_id=workspace_id,
-        id=id,
-        edge=edge,
-    )
+    kwargs = _get_kwargs()
 
     response = await client.get_async_httpx_client().request(**kwargs)
 
@@ -184,34 +121,20 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    tenant_id: str,
-    workspace_id: str,
-    id: str,
-    edge: GetLocationEdgesEdge,
     *,
     client: AuthenticatedClient,
-) -> CommonRequestError | EngineOutputEngineDataPage | None:
+) -> CommonRequestError | GetComplianceFrameworksResponse200 | None:
     """
-    Args:
-        tenant_id (str):
-        workspace_id (str):
-        id (str):
-        edge (GetLocationEdgesEdge):
-
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        CommonRequestError | EngineOutputEngineDataPage
+        CommonRequestError | GetComplianceFrameworksResponse200
     """
 
     return (
         await asyncio_detailed(
-            tenant_id=tenant_id,
-            workspace_id=workspace_id,
-            id=id,
-            edge=edge,
             client=client,
         )
     ).parsed

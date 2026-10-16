@@ -10,6 +10,7 @@ import os
 
 import httpx
 import pytest
+from mcp.server.fastmcp.exceptions import ToolError
 
 from switch_trust_mcp import client as client_mod
 from switch_trust_mcp import config as config_mod
@@ -18,6 +19,7 @@ from switch_trust_mcp import server as server_mod
 from switch_trust_mcp.client import ClientError, SwitchTrustClient
 from switch_trust_mcp.config import (
     ConfigError,
+    derive_api_url,
     load_config,
     validate_switch_trust_instance,
 )
@@ -87,6 +89,46 @@ class TestValidateSwitchTrustInstance:
         assert validate_switch_trust_instance(None) is None
         assert validate_switch_trust_instance("") is None
 
+    @pytest.mark.parametrize(
+        "url",
+        [
+            # Userinfo, including smuggling attempts that urlsplit and httpx
+            # parse differently.
+            "https://user:pw@app.switchagents.ai",
+            "https://evil.com@app.switchagents.ai",
+            "https://evil.com\\@app.switchagents.ai",
+            "https://evil.com;@app.switchagents.ai",
+            "https://evil.com\t@app.switchagents.ai",
+            "https://@app.switchagents.ai",
+            # Hostname characters outside letters, digits, dots and hyphens.
+            "https://evil.com%40app.switchagents.ai",
+            "https://аpp.switchagents.ai",  # Cyrillic "а"
+            "https://app.switchagents.ai／.evil.com",
+            # Invalid ports.
+            "https://app.switchagents.ai:99999",
+            "https://app.switchagents.ai:abc",
+            # Anything beyond an origin.
+            "https://app.switchagents.ai/foo",
+            "https://app.switchagents.ai?x=1",
+            "https://app.switchagents.ai#frag",
+            "http://localhost:3030/x",
+        ],
+    )
+    def test_rejects_anything_but_a_bare_origin(self, url):
+        assert validate_switch_trust_instance(url) is None
+
+    @pytest.mark.parametrize(
+        ("url", "expected"),
+        [
+            ("https://APP.SwitchAgents.AI", "https://app.switchagents.ai"),
+            ("HTTPS://app.switchagents.ai/", "https://app.switchagents.ai"),
+            ("https://app.switchagents.ai:8443", "https://app.switchagents.ai:8443"),
+            ("https://app.switchagents.ai?", "https://app.switchagents.ai"),
+        ],
+    )
+    def test_returns_canonical_origin(self, url, expected):
+        assert validate_switch_trust_instance(url) == expected
+
 
 class TestLoadConfig:
     def test_reads_env_vars(self, monkeypatch):
@@ -113,6 +155,8 @@ class TestLoadConfig:
         monkeypatch.setenv("SWITCH_TRUST_API_KEY", "sk_switch_trust")
         monkeypatch.setenv("SWITCH_TRUST_INSTANCE", "http://localhost:3030/")
         assert load_config().instance == "http://localhost:3030"
+
+
 
 
 # --------------------------------------------------------------------------
@@ -359,6 +403,37 @@ def _make_client(handler):
 
 
 class TestSwitchTrustClient:
+    def test_api_calls_use_api_host_and_assets_use_instance(self):
+        hosts = {}
+
+        def handler(request):
+            hosts[request.url.path] = request.url.host
+            if request.url.path == "/v1/auth/tenants":
+                return httpx.Response(
+                    200,
+                    json=[
+                        {"metadata": {"tenant_id": "t1", "active_workspace_id": "w1"}}
+                    ],
+                )
+            if request.url.path.startswith("/api/v1/"):
+                return httpx.Response(200, json={"data": [], "total": 0})
+            return httpx.Response(200, text="fragment")
+
+        client = SwitchTrustClient(
+            "https://app.switchagents.ai",
+            "sk_test",
+            transport=httpx.MockTransport(handler),
+        )
+        client.list_issues({})
+        client.fetch_remediation_fragment("guardrails", "short-explanation")
+        assert hosts == {
+            "/v1/auth/tenants": "api.switchagents.ai",
+            "/api/v1/issues/tenants/t1/workspaces/w1": "api.switchagents.ai",
+            "/assets/docs-remediations/guardrails/short-explanation.md": (
+                "app.switchagents.ai"
+            ),
+        }
+
     def test_resolve_scope_from_tenants_list(self):
         def handler(request):
             assert request.url.path == "/v1/auth/tenants"
@@ -388,6 +463,57 @@ class TestSwitchTrustClient:
 
         with pytest.raises(ClientError):
             _make_client(handler).resolve_scope()
+
+    @pytest.mark.parametrize("status", [401, 403])
+    def test_resolve_scope_rejects_bad_key_with_actionable_message(self, status):
+        def handler(request):
+            return httpx.Response(status, json={"error": "nope"})
+
+        with pytest.raises(ClientError, match="API key invalid, revoked, or expired"):
+            _make_client(handler).resolve_scope()
+
+    @staticmethod
+    def _list_tools_answering(response):
+        def handler(request):
+            if request.url.path == "/v1/auth/tenants":
+                return httpx.Response(
+                    200,
+                    json=[
+                        {"metadata": {"tenant_id": "t1", "active_workspace_id": "w1"}}
+                    ],
+                )
+            return response
+
+        return _make_client(handler)
+
+    # A 400 names what the backend refused (an unknown filter field, say), so the
+    # agent can correct its call instead of seeing a bare status.
+    def test_client_error_carries_the_backend_message(self):
+        client = self._list_tools_answering(
+            httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "code": 400,
+                        "message": "unknown filter field(s) for aispm_tools: supplier",
+                    }
+                },
+            )
+        )
+        with pytest.raises(ClientError) as exc:
+            client.list_assets(client_mod.SCOPE_TOOLS, {"supplier__eq": "x"})
+        assert "HTTP 400" in str(exc.value)
+        assert "unknown filter field(s) for aispm_tools: supplier" in str(exc.value)
+        assert exc.value.status_code == 400
+
+    def test_client_error_ignores_a_body_without_the_error_shape(self):
+        client = self._list_tools_answering(
+            httpx.Response(400, text="<html>proxy error page</html>")
+        )
+        with pytest.raises(ClientError) as exc:
+            client.list_assets(client_mod.SCOPE_TOOLS, {})
+        assert "HTTP 400" in str(exc.value)
+        assert "proxy" not in str(exc.value)
 
     def test_scoped_path_construction_and_params(self):
         seen = {}
@@ -624,8 +750,28 @@ class TestTypedClientCalls:
             return httpx.Response(403, json={"code": 403, "message": "forbidden"})
 
         client = _make_client(_with_tenant_resolution(handler))
-        with pytest.raises(ClientError):
+        with pytest.raises(ClientError, match="forbidden"):
             client.get_guardrail_policy("p1")
+
+    def test_typed_raises_client_error_on_nested_error_response(self):
+        # The backend's real wire format wraps the error one level deeper than
+        # its OpenAPI spec documents: {"error": {"code": ..., "message": ...}}.
+        # The generated CommonRequestError model only understands the flat
+        # shape and crashes with KeyError('code') on this one.
+        def handler(request):
+            return httpx.Response(
+                404,
+                json={"error": {"code": 404, "message": "Agent endpoint not found"}},
+            )
+
+        client = _make_client(_with_tenant_resolution(handler))
+        with pytest.raises(ClientError) as exc_info:
+            client.get_agent_endpoint("agn_1")
+        message = str(exc_info.value)
+        assert "'code'" not in message
+        assert "404" in message
+        assert "Agent endpoint not found" in message
+        assert exc_info.value.status_code == 404
 
     def test_guardrail_analytics_injects_agent_id(self):
         seen = {}
@@ -882,6 +1028,42 @@ class TestTypedClientCalls:
         client = _make_client(_with_tenant_resolution(handler))
         client.list_roi_interactions(agent_id="agn_1")
         assert "order" not in seen["query"]
+
+    def test_list_roi_interactions_parses_tool_definitions_and_tool_use(self):
+        # Regression: tool_definitions/tool_use are JSON arrays of tool records,
+        # not objects. A generated client that mis-modeled them as maps raised
+        # "dictionary update sequence element #0 has length 3; 2 is required"
+        # on any interaction that actually used a tool.
+        def handler(request):
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "id": "int_1",
+                            "agent_id": "agn_1",
+                            "tool_definitions": [
+                                {
+                                    "name": "web_search",
+                                    "description": "Search the web",
+                                    "input_schema_json": "{}",
+                                    "fingerprint": "fp1",
+                                }
+                            ],
+                            "tool_use": [
+                                {"id": "tu_1", "name": "web_search", "input_json": "{}"}
+                            ],
+                        }
+                    ],
+                    "total_count": 1,
+                },
+            )
+
+        client = _make_client(_with_tenant_resolution(handler))
+        result = client.list_roi_interactions(agent_id="agn_1")
+        row = result["items"][0]
+        assert row["tool_definitions"][0]["name"] == "web_search"
+        assert row["tool_use"][0]["id"] == "tu_1"
 
     def test_list_roi_analyses_path_and_params(self):
         seen = {}
@@ -1498,6 +1680,34 @@ class TestServerTools:
         assert params["name__ilk"] == "%gpt%"
         assert params["severity__eq"] == "HIGH"
 
+    def test_list_agents_supplier_and_library_params(self, fake_client):
+        server_mod.list_agents(supplier="openai", library="langchain")
+        params = fake_client.calls[-1][2]
+        assert params["supplier__eq"] == "openai"
+        assert params["library__eq"] == "langchain"
+
+    # The backend refuses a filter on a column the asset type lacks, so each tool
+    # offers only the filters its scope can serve.
+    def test_list_tools_offers_no_supplier_or_library_filter(self, fake_client):
+        with pytest.raises(TypeError):
+            server_mod.list_tools(supplier="openai")
+        with pytest.raises(TypeError):
+            server_mod.list_tools(library="langchain")
+        server_mod.list_tools(name="search", severity="HIGH")
+        call = fake_client.calls[-1]
+        assert call[1] == client_mod.SCOPE_TOOLS
+        assert call[2]["name__ilk"] == "%search%"
+        assert not {"supplier__eq", "library__eq"} & call[2].keys()
+
+    def test_list_mcp_servers_offers_library_but_no_supplier_filter(self, fake_client):
+        with pytest.raises(TypeError):
+            server_mod.list_mcp_servers(supplier="openai")
+        server_mod.list_mcp_servers(library="fastmcp")
+        call = fake_client.calls[-1]
+        assert call[1] == client_mod.SCOPE_MCP_SERVERS
+        assert call[2]["library__eq"] == "fastmcp"
+        assert "supplier__eq" not in call[2]
+
     def test_get_agent_includes_edges(self, fake_client):
         result = server_mod.get_agent("a1")
         assert result["asset"]["id"] == "a1"
@@ -1861,7 +2071,7 @@ class TestPageSizeClamping:
 
 
 class TestErrorHandling:
-    def test_client_error_returned_as_dict(self, monkeypatch):
+    def test_client_error_raises_tool_error(self, monkeypatch):
         class Boom:
             def resolve_scope(self):
                 raise ClientError("boom")
@@ -1870,11 +2080,10 @@ class TestErrorHandling:
                 raise ClientError("boom")
 
         monkeypatch.setattr(server_mod, "_client", Boom())
-        result = server_mod.list_issues()
-        assert "error" in result
-        assert "boom" in result["error"]
+        with pytest.raises(ToolError, match="boom"):
+            server_mod.list_issues()
 
-    def test_new_domain_tools_return_error_dict(self, monkeypatch):
+    def test_new_domain_tools_raise_tool_error(self, monkeypatch):
         class Boom:
             def resolve_scope(self):
                 raise ClientError("boom")
@@ -1916,20 +2125,62 @@ class TestErrorHandling:
                 raise ClientError("boom")
 
         monkeypatch.setattr(server_mod, "_client", Boom())
-        assert "error" in server_mod.list_guardrail_policies()
-        assert "error" in server_mod.list_llm_interactions()
-        assert "error" in server_mod.list_llm_sessions(agent_id="a1")
-        assert "error" in server_mod.list_evaluations()
-        assert "error" in server_mod.list_agent_evaluations()
-        assert "error" in server_mod.list_evaluation_runs()
-        assert "error" in server_mod.list_evaluation_run_results("run1")
-        assert "error" in server_mod.list_roi_agents()
-        assert "error" in server_mod.list_roi_interactions(agent_id="agn_1")
-        assert "error" in server_mod.list_roi_analyses()
-        assert "error" in server_mod.get_latest_roi_analyses(
-            agent_id="agn_1", analysis_types=["tool_bloat"]
-        )
-        assert "error" in server_mod.get_roi_analysis("an1")
+        tool_calls = [
+            lambda: server_mod.list_guardrail_policies(),
+            lambda: server_mod.list_llm_interactions(),
+            lambda: server_mod.list_llm_sessions(agent_id="a1"),
+            lambda: server_mod.list_evaluations(),
+            lambda: server_mod.list_agent_evaluations(),
+            lambda: server_mod.list_evaluation_runs(),
+            lambda: server_mod.list_evaluation_run_results("run1"),
+            lambda: server_mod.list_roi_agents(),
+            lambda: server_mod.list_roi_interactions(agent_id="agn_1"),
+            lambda: server_mod.list_roi_analyses(),
+            lambda: server_mod.get_latest_roi_analyses(
+                agent_id="agn_1", analysis_types=["tool_bloat"]
+            ),
+            lambda: server_mod.get_roi_analysis("an1"),
+        ]
+        for call in tool_calls:
+            with pytest.raises(ToolError, match="boom"):
+                call()
+
+    def test_typed_tool_surfaces_backend_message_not_code(self, monkeypatch):
+        # Regression for the nested-error-envelope crash: the backend wraps
+        # errors as {"error": {"code": ..., "message": ...}}, not the flat
+        # {code, message} the OpenAPI spec documents, so the generated
+        # CommonRequestError.from_dict used to raise a bare KeyError('code').
+        def handler(request):
+            if request.url.path == "/v1/auth/tenants":
+                return httpx.Response(
+                    200,
+                    json=[
+                        {"metadata": {"tenant_id": "t1", "active_workspace_id": "w1"}}
+                    ],
+                )
+            return httpx.Response(
+                404,
+                json={"error": {"code": 404, "message": "Agent endpoint not found"}},
+            )
+
+        real_client = _make_client(handler)
+        monkeypatch.setattr(server_mod, "_client", real_client)
+        with pytest.raises(ToolError) as exc_info:
+            server_mod.get_agent_endpoint("agn_1")
+        assert "'code'" not in str(exc_info.value)
+        assert "404" in str(exc_info.value)
+        assert "Agent endpoint not found" in str(exc_info.value)
+
+    def test_revoked_api_key_message_is_actionable(self, monkeypatch):
+        def handler(request):
+            return httpx.Response(
+                401, json={"error": {"code": 401, "message": "unauthorized"}}
+            )
+
+        real_client = _make_client(handler)
+        monkeypatch.setattr(server_mod, "_client", real_client)
+        with pytest.raises(ToolError, match="API key invalid, revoked, or expired"):
+            server_mod.list_issues()
 
 
 def test_map_file_is_valid_json():

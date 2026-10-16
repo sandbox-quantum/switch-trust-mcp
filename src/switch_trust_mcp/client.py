@@ -25,6 +25,7 @@ be typed, so those calls go through the client's httpx with explicit params.
 from __future__ import annotations
 
 import re
+import sys
 from typing import Any
 from urllib.parse import quote
 
@@ -73,9 +74,6 @@ from switch_trust_mcp._platform_api.api.roi import (
     roi_list_interactions,
 )
 from switch_trust_mcp._platform_api.client import AuthenticatedClient as _PlatformClient
-from switch_trust_mcp._platform_api.models.common_request_error import (
-    CommonRequestError,
-)
 from switch_trust_mcp._platform_api.models.get_aispm_agent_edges_edge import (
     GetAispmAgentEdgesEdge,
 )
@@ -112,6 +110,7 @@ from switch_trust_mcp._platform_api.models.roi_list_analyses_order import (
 from switch_trust_mcp._platform_api.models.roi_list_interactions_order import (
     RoiListInteractionsOrder,
 )
+from switch_trust_mcp.config import derive_api_url
 
 # Asset scopes (route segments in the Switch Trust API).
 SCOPE_ISSUES = "issues"
@@ -176,6 +175,38 @@ def is_safe_path_segment(value: str) -> bool:
 
 class ClientError(Exception):
     """Raised for HTTP or transport failures against the backend."""
+
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def _extract_backend_message(response: httpx.Response) -> str | None:
+    """Pull a human-readable message out of a backend error body.
+
+    The OpenAPI spec documents errors as a flat ``{code, message}`` object,
+    but the backend actually wraps that under an ``"error"`` key — ``{"error": {"code": ..., "message": ...}}`` — so the
+    generated client's ``CommonRequestError.from_dict`` (unguarded
+    ``d.pop("code")``) crashes with ``KeyError: 'code'`` on every real error
+    response. Read defensively for both shapes rather than trusting either.
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    if not isinstance(body, dict):
+        return None
+    detail = body.get("error")
+    if not isinstance(detail, dict):
+        detail = body
+    message = detail.get("message")
+    return message if isinstance(message, str) and message else None
+
+
+def _describe_error_response(method: str, path: str, response: httpx.Response) -> str:
+    base = f"{method} {path} -> HTTP {response.status_code}"
+    message = _extract_backend_message(response)
+    return f"{base}: {message}" if message else base
 
 
 class _ScrubbedAuthenticatedClient(_PlatformClient):
@@ -266,19 +297,21 @@ class SwitchTrustClient:
         # ``base_url`` carries the API prefix so paths built here are relative
         # to it, matching the generated typed endpoint functions.
         #
-        # All three clients hit the same origin, so they share one connection
-        # pool via a single transport rather than opening one pool each.
+        # The API clients hit the instance's api. host; static assets (below)
+        # stay on the instance itself. All three share one transport, which
+        # keeps a connection pool per origin.
         transport = transport or httpx.HTTPTransport()
         httpx_args = {"transport": transport}
+        api_url = derive_api_url(instance)
         platform = _ScrubbedAuthenticatedClient(
-            base_url=f"{instance}/api/v1",
+            base_url=f"{api_url}/api/v1",
             token=api_key,
             prefix="ApiKey",
             timeout=httpx.Timeout(timeout),
             httpx_args=httpx_args,
         )
         auth = _AuthClient(
-            base_url=f"{instance}/v1/auth",
+            base_url=f"{api_url}/v1/auth",
             token=api_key,
             prefix="ApiKey",
             timeout=httpx.Timeout(timeout),
@@ -319,7 +352,12 @@ class SwitchTrustClient:
         if self._tenant_id and self._workspace_id:
             return self._tenant_id, self._workspace_id
 
-        payload = self._request(self._auth_http, "GET", "/tenants")
+        try:
+            payload = self._request(self._auth_http, "GET", "/tenants")
+        except ClientError as exc:
+            if exc.status_code in (401, 403):
+                raise ClientError("API key invalid, revoked, or expired") from exc
+            raise
         for tenant in _iter_tenants(payload):
             metadata = tenant.get("metadata") or tenant.get("Metadata") or {}
             tenant_id = metadata.get("tenant_id")
@@ -367,8 +405,11 @@ class SwitchTrustClient:
             response = http.request(method, path, params=_clean_params(params))
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            # The body names what was refused (an unknown filter field, say), so
+            # the agent can correct its call instead of seeing a bare status.
             raise ClientError(
-                f"{method} {path} -> HTTP {exc.response.status_code}"
+                _describe_error_response(method, path, exc.response),
+                status_code=exc.response.status_code,
             ) from exc
         except httpx.HTTPError as exc:
             raise ClientError(f"{method} {path} failed: {type(exc).__name__}") from exc
@@ -400,18 +441,44 @@ class SwitchTrustClient:
         return self._request(self._platform_http, "GET", path, params=params)
 
     def _typed(self, sync_fn: Any, *args: Any, **kwargs: Any) -> Any:
-        """Call a generated ``sync()`` function through the retained typed
-        client and convert its parsed attrs model to a plain dict via the
+        """Issue the request a generated ``sync()`` function would issue, and
+        convert a successful parsed attrs model to a plain dict via the
         model's own ``to_dict()``.
 
-        Raises ``ClientError`` on an error-shaped response (``CommonRequestError``)
-        or an undocumented status (``sync()`` returns ``None``).
+        Deliberately does not delegate to ``sync()``/``sync_detailed()`` for
+        non-2xx responses: those parse any error status via the generated
+        ``CommonRequestError.from_dict``, which does an unguarded
+        ``d.pop("code")`` and assumes a flat ``{code, message}`` body. The
+        backend's actual error envelope nests that under an ``"error"`` key,
+        so that parse crashes with ``KeyError: 'code'`` on every real error
+        response instead of raising a readable ``ClientError``. Building the
+        request via the generated module's own ``_get_kwargs`` and reading
+        the body ourselves (``_describe_error_response``) sidesteps the
+        mismatch regardless of which shape actually comes back.
         """
-        result = sync_fn(*args, client=self._platform_client, **kwargs)
+        module = sys.modules[sync_fn.__module__]
+        request_kwargs = module._get_kwargs(*args, **kwargs)
+        method = str(request_kwargs.get("method", "")).upper()
+        url = request_kwargs.get("url", "")
+        response = self._platform_client.get_httpx_client().request(**request_kwargs)
+        if not response.is_success:
+            raise ClientError(
+                _describe_error_response(method, url, response),
+                status_code=response.status_code,
+            )
+        try:
+            result = module._parse_response(
+                client=self._platform_client, response=response
+            )
+        except Exception as exc:
+            raise ClientError(
+                f"{method} {url} -> HTTP {response.status_code} response did not "
+                f"match the expected shape ({exc})"
+            ) from exc
         if result is None:
-            raise ClientError(f"{sync_fn.__module__} -> undocumented response status")
-        if isinstance(result, CommonRequestError):
-            raise ClientError(f"{sync_fn.__module__} -> {result.to_dict()}")
+            raise ClientError(
+                f"{method} {url} -> undocumented response status {response.status_code}"
+            )
         return result.to_dict()
 
     # -- issues ------------------------------------------------------------

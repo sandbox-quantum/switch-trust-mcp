@@ -9,7 +9,6 @@ class GetAispmAgentEdgesEdge(StrEnum):
     AISPM_OUTPUT_GUARDRAILS = "aispm_output_guardrails"
     AISPM_TOOLS = "aispm_tools"
     ASSETS = "assets"
-    INSTANCES = "instances"
     ISSUES = "issues"
     LOCATIONS = "locations"
     SESSIONS = "sessions"

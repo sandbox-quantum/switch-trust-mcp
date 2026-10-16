@@ -12,10 +12,12 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-    from ..models.roi_interaction_record_tool_definitions import (
-        RoiInteractionRecordToolDefinitions,
+    from ..models.roi_interaction_record_tool_definitions_item import (
+        RoiInteractionRecordToolDefinitionsItem,
     )
-    from ..models.roi_interaction_record_tool_use import RoiInteractionRecordToolUse
+    from ..models.roi_interaction_record_tool_use_item import (
+        RoiInteractionRecordToolUseItem,
+    )
 
 
 T = TypeVar("T", bound="RoiInteractionRecord")
@@ -44,8 +46,8 @@ class RoiInteractionRecord:
         response_text (str | Unset):
         session_id (str | Unset):
         stop_reason (str | Unset):
-        tool_definitions (RoiInteractionRecordToolDefinitions | Unset):
-        tool_use (RoiInteractionRecordToolUse | Unset):
+        tool_definitions (list[RoiInteractionRecordToolDefinitionsItem] | Unset):
+        tool_use (list[RoiInteractionRecordToolUseItem] | Unset):
         total_latency_ms (int | Unset):
     """
 
@@ -68,16 +70,18 @@ class RoiInteractionRecord:
     response_text: str | Unset = UNSET
     session_id: str | Unset = UNSET
     stop_reason: str | Unset = UNSET
-    tool_definitions: RoiInteractionRecordToolDefinitions | Unset = UNSET
-    tool_use: RoiInteractionRecordToolUse | Unset = UNSET
+    tool_definitions: list[RoiInteractionRecordToolDefinitionsItem] | Unset = UNSET
+    tool_use: list[RoiInteractionRecordToolUseItem] | Unset = UNSET
     total_latency_ms: int | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.roi_interaction_record_tool_definitions import (
-            RoiInteractionRecordToolDefinitions,
+        from ..models.roi_interaction_record_tool_definitions_item import (
+            RoiInteractionRecordToolDefinitionsItem,
         )  # noqa: PLC0415
-        from ..models.roi_interaction_record_tool_use import RoiInteractionRecordToolUse  # noqa: PLC0415
+        from ..models.roi_interaction_record_tool_use_item import (
+            RoiInteractionRecordToolUseItem,
+        )  # noqa: PLC0415
 
         agent_id = self.agent_id
 
@@ -117,13 +121,19 @@ class RoiInteractionRecord:
 
         stop_reason = self.stop_reason
 
-        tool_definitions: dict[str, Any] | Unset = UNSET
+        tool_definitions: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.tool_definitions, Unset):
-            tool_definitions = self.tool_definitions.to_dict()
+            tool_definitions = []
+            for tool_definitions_item_data in self.tool_definitions:
+                tool_definitions_item = tool_definitions_item_data.to_dict()
+                tool_definitions.append(tool_definitions_item)
 
-        tool_use: dict[str, Any] | Unset = UNSET
+        tool_use: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.tool_use, Unset):
-            tool_use = self.tool_use.to_dict()
+            tool_use = []
+            for tool_use_item_data in self.tool_use:
+                tool_use_item = tool_use_item_data.to_dict()
+                tool_use.append(tool_use_item)
 
         total_latency_ms = self.total_latency_ms
 
@@ -179,10 +189,12 @@ class RoiInteractionRecord:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.roi_interaction_record_tool_definitions import (
-            RoiInteractionRecordToolDefinitions,
+        from ..models.roi_interaction_record_tool_definitions_item import (
+            RoiInteractionRecordToolDefinitionsItem,
         )  # noqa: PLC0415
-        from ..models.roi_interaction_record_tool_use import RoiInteractionRecordToolUse  # noqa: PLC0415
+        from ..models.roi_interaction_record_tool_use_item import (
+            RoiInteractionRecordToolUseItem,
+        )  # noqa: PLC0415
 
         d = dict(src_dict)
         agent_id = d.pop("agent_id", UNSET)
@@ -224,20 +236,28 @@ class RoiInteractionRecord:
         stop_reason = d.pop("stop_reason", UNSET)
 
         _tool_definitions = d.pop("tool_definitions", UNSET)
-        tool_definitions: RoiInteractionRecordToolDefinitions | Unset
-        if isinstance(_tool_definitions, Unset):
-            tool_definitions = UNSET
-        else:
-            tool_definitions = RoiInteractionRecordToolDefinitions.from_dict(
-                _tool_definitions
-            )
+        tool_definitions: list[RoiInteractionRecordToolDefinitionsItem] | Unset = UNSET
+        if _tool_definitions is not UNSET:
+            tool_definitions = []
+            for tool_definitions_item_data in _tool_definitions:
+                tool_definitions_item = (
+                    RoiInteractionRecordToolDefinitionsItem.from_dict(
+                        tool_definitions_item_data
+                    )
+                )
+
+                tool_definitions.append(tool_definitions_item)
 
         _tool_use = d.pop("tool_use", UNSET)
-        tool_use: RoiInteractionRecordToolUse | Unset
-        if isinstance(_tool_use, Unset):
-            tool_use = UNSET
-        else:
-            tool_use = RoiInteractionRecordToolUse.from_dict(_tool_use)
+        tool_use: list[RoiInteractionRecordToolUseItem] | Unset = UNSET
+        if _tool_use is not UNSET:
+            tool_use = []
+            for tool_use_item_data in _tool_use:
+                tool_use_item = RoiInteractionRecordToolUseItem.from_dict(
+                    tool_use_item_data
+                )
+
+                tool_use.append(tool_use_item)
 
         total_latency_ms = d.pop("total_latency_ms", UNSET)
 

@@ -28,7 +28,10 @@ Set two environment variables:
 | `SWITCH_TRUST_INSTANCE`  | Switch Trust instance base URL, e.g. `https://app.switchagents.ai`. |
 
 The instance URL is validated against a fail-closed host allowlist before any
-credential is attached.
+credential is attached, and must be a bare origin (no path, query or
+credentials). Set it to the web app URL: API calls go to the same
+deployment's `api.` host automatically (`https://app.switchagents.ai` →
+`https://api.switchagents.ai`).
 
 The **tenant and workspace are auto-discovered** from the API key at startup —
 you do not configure any IDs. A key is pinned to exactly one tenant + active
@@ -80,7 +83,9 @@ Add to your MCP client config (Claude Code `.mcp.json`, Cursor, etc.):
 
 **Inventory browse**
 
-- `list_models | list_agents | list_tools | list_mcp_servers(name?, severity?, supplier?, library?, page_size?, cursor?)`
+- `list_models | list_agents(name?, severity?, supplier?, library?, page_size?, cursor?)`
+- `list_mcp_servers(name?, severity?, library?, page_size?, cursor?)`
+- `list_tools(name?, severity?, page_size?, cursor?)`
 - `get_model | get_agent | get_tool | get_mcp_server(asset_id)` — detail plus
   attached issues, related assets, and code locations.
 

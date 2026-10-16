@@ -12,9 +12,11 @@ Env:  SWITCH_TRUST_API_KEY (sk_...) and SWITCH_TRUST_INSTANCE (https://<host>)
 from __future__ import annotations
 
 import logging
+
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 
 from switch_trust_mcp import client as client_mod
 from switch_trust_mcp.client import ClientError, SwitchTrustClient
@@ -26,7 +28,9 @@ logger = logging.getLogger(__name__)
 mcp = FastMCP("switch-trust-mcp")
 
 # Lazily initialized shared singletons (config errors surface on first tool use,
-# not at import time, so the server process can still start).
+# not at import time, so the server process can still start). One client for
+# the server's whole lifetime in both transport modes: hosted HTTP mode serves
+# one shared Switch Trust credential to every caller, same as stdio.
 _client: SwitchTrustClient | None = None
 _remediation: RemediationDocs | None = None
 
@@ -49,11 +53,18 @@ def _get_remediation() -> RemediationDocs:
 
 
 def _handle(fn):
-    """Turn expected backend/config errors into a readable tool result."""
+    """Turn expected backend/config errors into a readable tool error.
+
+    Raises ``ToolError`` rather than returning ``{"error": ...}`` so FastMCP
+    reports ``isError=True`` consistently — a plain dict return is always
+    reported as a successful call (``isError=False``), even when its only key
+    is ``"error"``, which left expected failures indistinguishable from real
+    data to any caller that branches on ``isError``.
+    """
     try:
         return fn()
     except (ClientError, ConfigError) as exc:
-        return {"error": str(exc)}
+        raise ToolError(str(exc)) from exc
 
 
 # --- defensive field extraction --------------------------------------------
@@ -541,12 +552,14 @@ def get_remediation_guidance(rule_name: str) -> dict[str, Any]:
 def _asset_filter_params(
     name: str | None,
     severity: str | None,
-    supplier: str | None,
-    library: str | None,
     page_size: int,
     cursor: str | None,
+    supplier: str | None = None,
+    library: str | None = None,
 ) -> dict[str, Any]:
     # Switch Trust asset endpoints use the generic Expr filter engine: field__op=value.
+    # A field the asset type lacks is refused with a 400, so each list tool passes
+    # only the filters its scope supports.
     params: dict[str, Any] = {
         "pageSize": _clamp(page_size, _MAX_PAGE_SIZE, _DEFAULT_PAGE_SIZE),
         "cursor": cursor,
@@ -631,12 +644,10 @@ def list_agents(
 def list_tools(
     name: str | None = None,
     severity: str | None = None,
-    supplier: str | None = None,
-    library: str | None = None,
     page_size: int = 25,
     cursor: str | None = None,
 ) -> Any:
-    """List inventoried agent tools. Filters: name, severity, supplier, library.
+    """List inventoried agent tools. Filters: name, severity.
 
     page_size is capped at 100; page with the returned cursor for more.
     """
@@ -644,8 +655,6 @@ def list_tools(
         client_mod.SCOPE_TOOLS,
         name=name,
         severity=severity,
-        supplier=supplier,
-        library=library,
         page_size=page_size,
         cursor=cursor,
     )
@@ -655,12 +664,11 @@ def list_tools(
 def list_mcp_servers(
     name: str | None = None,
     severity: str | None = None,
-    supplier: str | None = None,
     library: str | None = None,
     page_size: int = 25,
     cursor: str | None = None,
 ) -> Any:
-    """List inventoried MCP servers. Filters: name, severity, supplier, library.
+    """List inventoried MCP servers. Filters: name, severity, library.
 
     page_size is capped at 100; page with the returned cursor for more.
     """
@@ -668,7 +676,6 @@ def list_mcp_servers(
         client_mod.SCOPE_MCP_SERVERS,
         name=name,
         severity=severity,
-        supplier=supplier,
         library=library,
         page_size=page_size,
         cursor=cursor,

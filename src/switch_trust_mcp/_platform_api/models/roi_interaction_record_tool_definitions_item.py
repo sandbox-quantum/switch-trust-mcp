@@ -9,11 +9,11 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 
-T = TypeVar("T", bound="RoiInteractionRecordToolDefinitions")
+T = TypeVar("T", bound="RoiInteractionRecordToolDefinitionsItem")
 
 
 @_attrs_define
-class RoiInteractionRecordToolDefinitions:
+class RoiInteractionRecordToolDefinitionsItem:
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -26,10 +26,10 @@ class RoiInteractionRecordToolDefinitions:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        roi_interaction_record_tool_definitions = cls()
+        roi_interaction_record_tool_definitions_item = cls()
 
-        roi_interaction_record_tool_definitions.additional_properties = d
-        return roi_interaction_record_tool_definitions
+        roi_interaction_record_tool_definitions_item.additional_properties = d
+        return roi_interaction_record_tool_definitions_item
 
     @property
     def additional_keys(self) -> list[str]:

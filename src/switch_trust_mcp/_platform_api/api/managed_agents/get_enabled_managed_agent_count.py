@@ -8,19 +8,21 @@ from ...client import AuthenticatedClient, Client
 from ...types import Response, UNSET
 from ... import errors
 
+from ...models.api_enabled_managed_agent_count_response import (
+    ApiEnabledManagedAgentCountResponse,
+)
 from ...models.common_request_error import CommonRequestError
-from ...models.engine_output_engine_data_page import EngineOutputEngineDataPage
 from typing import cast
 
 
 def _get_kwargs(
-    id: str,
+    tenant_id: str,
 ) -> dict[str, Any]:
 
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/rules/{id}/results".format(
-            id=quote(str(id), safe=""),
+        "url": "/internal/api/v1/managed-agents/tenants/{tenant_id}/count".format(
+            tenant_id=quote(str(tenant_id), safe=""),
         ),
     }
 
@@ -29,21 +31,16 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> CommonRequestError | EngineOutputEngineDataPage | None:
+) -> ApiEnabledManagedAgentCountResponse | CommonRequestError | None:
     if response.status_code == 200:
-        response_200 = EngineOutputEngineDataPage.from_dict(response.json())
+        response_200 = ApiEnabledManagedAgentCountResponse.from_dict(response.json())
 
         return response_200
 
-    if response.status_code == 401:
-        response_401 = CommonRequestError.from_dict(response.json())
+    if response.status_code == 400:
+        response_400 = CommonRequestError.from_dict(response.json())
 
-        return response_401
-
-    if response.status_code == 404:
-        response_404 = CommonRequestError.from_dict(response.json())
-
-        return response_404
+        return response_400
 
     if response.status_code == 500:
         response_500 = CommonRequestError.from_dict(response.json())
@@ -58,7 +55,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[CommonRequestError | EngineOutputEngineDataPage]:
+) -> Response[ApiEnabledManagedAgentCountResponse | CommonRequestError]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -68,24 +65,24 @@ def _build_response(
 
 
 def sync_detailed(
-    id: str,
+    tenant_id: str,
     *,
-    client: AuthenticatedClient,
-) -> Response[CommonRequestError | EngineOutputEngineDataPage]:
+    client: AuthenticatedClient | Client,
+) -> Response[ApiEnabledManagedAgentCountResponse | CommonRequestError]:
     """
     Args:
-        id (str):
+        tenant_id (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[CommonRequestError | EngineOutputEngineDataPage]
+        Response[ApiEnabledManagedAgentCountResponse | CommonRequestError]
     """
 
     kwargs = _get_kwargs(
-        id=id,
+        tenant_id=tenant_id,
     )
 
     response = client.get_httpx_client().request(
@@ -96,47 +93,47 @@ def sync_detailed(
 
 
 def sync(
-    id: str,
+    tenant_id: str,
     *,
-    client: AuthenticatedClient,
-) -> CommonRequestError | EngineOutputEngineDataPage | None:
+    client: AuthenticatedClient | Client,
+) -> ApiEnabledManagedAgentCountResponse | CommonRequestError | None:
     """
     Args:
-        id (str):
+        tenant_id (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        CommonRequestError | EngineOutputEngineDataPage
+        ApiEnabledManagedAgentCountResponse | CommonRequestError
     """
 
     return sync_detailed(
-        id=id,
+        tenant_id=tenant_id,
         client=client,
     ).parsed
 
 
 async def asyncio_detailed(
-    id: str,
+    tenant_id: str,
     *,
-    client: AuthenticatedClient,
-) -> Response[CommonRequestError | EngineOutputEngineDataPage]:
+    client: AuthenticatedClient | Client,
+) -> Response[ApiEnabledManagedAgentCountResponse | CommonRequestError]:
     """
     Args:
-        id (str):
+        tenant_id (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[CommonRequestError | EngineOutputEngineDataPage]
+        Response[ApiEnabledManagedAgentCountResponse | CommonRequestError]
     """
 
     kwargs = _get_kwargs(
-        id=id,
+        tenant_id=tenant_id,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -145,25 +142,25 @@ async def asyncio_detailed(
 
 
 async def asyncio(
-    id: str,
+    tenant_id: str,
     *,
-    client: AuthenticatedClient,
-) -> CommonRequestError | EngineOutputEngineDataPage | None:
+    client: AuthenticatedClient | Client,
+) -> ApiEnabledManagedAgentCountResponse | CommonRequestError | None:
     """
     Args:
-        id (str):
+        tenant_id (str):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        CommonRequestError | EngineOutputEngineDataPage
+        ApiEnabledManagedAgentCountResponse | CommonRequestError
     """
 
     return (
         await asyncio_detailed(
-            id=id,
+            tenant_id=tenant_id,
             client=client,
         )
     ).parsed
